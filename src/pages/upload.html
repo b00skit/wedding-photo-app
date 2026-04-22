@@ -37,6 +37,17 @@
                 </div>
             </form>
 
+            <hr style="margin: 3em 0; border: 0; border-top: 1px solid #eee;">
+
+            <h3>Nedavno naloženo</h3>
+            <ul id="gallery" data-next-page="" data-done="false" data-num-videos="0"></ul>
+            <div id="spinner" class="hidden"><div></div></div>
+
+            <p id="refreshLink" class="hidden">
+                <span class="message">Ni več fotografij za prikaz.</span><br />
+                <a class="action" href="#">Osveži za ogled novejših fotografij</a>
+            </p>
+
         </section>
 
         <div id="toast">
@@ -44,6 +55,11 @@
             <div class="timer"></div>
         </div>
 
+        <template id="galleryItem">
+            <li><a data-fslightbox="gallery"></a></li>
+        </template>
+
+        <script src="js/fslightbox.js"></script>
         <script src="js/scripts.js"></script>
     </body>
 </html>
