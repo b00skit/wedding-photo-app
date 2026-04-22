@@ -142,24 +142,16 @@ function renderPhotoThumbnails(
                     case 'video': 
                         videoTemplate = document.createElement('template');
                     
-                        if("transcodedUrl" in file) {
-                            media = document.createElement('video');
-                            media.src = getLightboxUrl(file);
-                            media.controls = true;
-                            media.poster = getThumbnailUrl(file);
-                            media.preload = 'none';
-                            media.height = window.innerHeight - 100;
-                            media.width = window.innerWidth - 100;
-                        } 
+                        // If we have a transcoded URL, use it. Otherwise, use the original URL.
+                        const videoSrc = file.transcodedUrl || getLightboxUrl(file);
                         
-                        else {
-                            media = document.createElement('div');
-                            media.classList.add('videoProcessingMessage');
-                            media.innerHTML = 
-                                `<p>Video processing...</p>
-                                 <p>Please refresh the page in a few minutes 
-                                    to view this video.</p>`;
-                        }
+                        media = document.createElement('video');
+                        media.src = videoSrc;
+                        media.controls = true;
+                        media.poster = getThumbnailUrl(file);
+                        media.preload = 'none';
+                        media.height = window.innerHeight - 100;
+                        media.width = window.innerWidth - 100;
 
                         const videoIndex = parseInt(galleryElement.dataset.numVideos) + 1;
                         galleryElement.dataset.numVideos = videoIndex;
