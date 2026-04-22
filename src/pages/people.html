@@ -3,29 +3,31 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>Detect people ≫ Annika & Andy's Wedding</title>
+        <title>Zaznaj osebe ≫ Poroka Davida & Sare</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="css/styles.css">
         <link rel="stylesheet" href="css/manage.css">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mulish:200,600">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Mulish:wght@200;600&display=swap">
         <link rel="shortcut icon" href="images/app-icon.png" type="image/x-icon" />
     </head>
     <body>
         <header>
-            <h1>Detect People</h1>
-            <p>
-                Enter the password and click the button below to analyse all photos currently in
-                the storage location for people's faces.
+            <img class="header-decor" src="images/header.jpg" />
+            <h1 class="site-title">David & Sara</h1>
+            <span class="date">28.05.2023</span>
+            <h2 style="text-align:center; font-family: Mulish; margin-top: 1em;">Zaznaj osebe</h2>
+            <p style="text-align:center; max-width: 600px; margin: 1em auto;">
+                Vnesite geslo in kliknite spodnji gumb za analizo vseh fotografij v shrambi za obraze ljudi.
             </p>
-            <p>
-                Once the analysis is complete all the unique faces found in the photos will be 
-                displayed here and the photos containing people will automatically be tagged.
+            <p style="text-align:center; max-width: 600px; margin: 1em auto;">
+                Ko bo analiza končana, bodo tukaj prikazani vsi edinstveni obrazi, fotografije z ljudmi pa bodo samodejno označene.
             </p>
-            <p>
-                You can apply a name to each face from this page, if you wish. If any of the 
-                automatic tags are incorrect, you can manually amend the tags on the 
-                <a href="/tag">tag photos</a> page.
+            <p style="text-align:center; max-width: 600px; margin: 1em auto;">
+                Na tej strani lahko vsakemu obrazu dodelite ime. Če so katere od samodejnih oznak napačne, jih lahko ročno popravite na strani za 
+                <a href="/tag">označevanje fotografij</a>.
             </p>
         </header>
         <section>
@@ -37,7 +39,7 @@
                     value="admin" 
                     autocomplete="username" 
                 />
-                <label for="managePeoplePassword">Password:</label>
+                <label for="managePeoplePassword">Geslo:</label>
                 <input 
                     type="password" 
                     name="password" 
@@ -48,9 +50,9 @@
                 <button 
                     id="managePeopleButton" 
                     class="button manageButton manageCommitButton requiresPassword"
-                    data-call-to-action="Analyse photos"
+                    data-call-to-action="Analiziraj fotografije"
                     disabled>
-                    Analyse photos
+                    Analiziraj fotografije
                 </button>
             </form>
         </section>

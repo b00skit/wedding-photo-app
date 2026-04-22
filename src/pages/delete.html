@@ -3,18 +3,23 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>Delete photos ≫ Annika & Andy's Wedding</title>
+        <title>Izbriši fotografije ≫ Poroka Davida & Sare</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="css/styles.css">
         <link rel="stylesheet" href="css/manage.css">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mulish:200,600">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Mulish:wght@200;600&display=swap">
         <link rel="shortcut icon" href="images/app-icon.png" type="image/x-icon" />
     </head>
     <body>
         <header>
-            <h1>Delete Photos</h1>
-            <p>Enter password to delete selected items</p>
+            <img class="header-decor" src="images/header.jpg" />
+            <h1 class="site-title">David & Sara</h1>
+            <span class="date">28.05.2023</span>
+            <h2 style="text-align:center; font-family: Mulish; margin-top: 1em;">Izbriši fotografije</h2>
+            <p style="text-align:center;">Vnesite geslo za brisanje izbranih elementov</p>
         </header>
         <section>
             <ul 
@@ -28,8 +33,8 @@
             <div id="spinner" class="hidden"><div></div></div>
             
             <p id="refreshLink" class="hidden">
-                <span class="message">No more photos to show.</span><br />
-                <a class="action" href="#">Refresh to see newer photos</a>
+                <span class="message">Ni več fotografij za prikaz.</span><br />
+                <a class="action" href="#">Osveži za ogled novejših fotografij</a>
             </p>
 
             <form class="manageCommitForm" id="manageDeleteForm" method="get" action="/delete">
@@ -41,7 +46,7 @@
                         autocomplete="username" 
                     />
                     <label for="manageDeletePassword">
-                        Password: 
+                        Geslo: 
                         <input 
                             type="password" 
                             name="password" 
@@ -54,9 +59,9 @@
                     <button 
                         id="manageDeleteButton" 
                         class="button manageButton manageCommitButton requiresPassword"
-                        data-call-to-action="Delete selected"
+                        data-call-to-action="Izbriši izbrano"
                         disabled>
-                        Delete selected
+                        Izbriši izbrano
                     </button>
                 </fieldset>
             </form>
