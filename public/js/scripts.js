@@ -1,7 +1,8 @@
 const galleryElement = document.getElementById('gallery');
 const spinnerElement = document.getElementById('spinner');
 const refreshLinkElement = document.getElementById('refreshLink');
-const galleryItemTemplate = document.getElementById('galleryItem').content;
+const galleryItemElement = document.getElementById('galleryItem');
+const galleryItemTemplate = galleryItemElement ? galleryItemElement.content : null;
 const uploadBtnElement = document.getElementById('uploadBtn');
 const imageFilesElement = document.getElementById('imageFiles');
 const uploadFeedbackElement = document.getElementById('uploadFeedback');
@@ -17,10 +18,12 @@ if (uploadFormElement) {
 }
 
 function renderPhotoThumbnails(
-    pageSize = parseInt(galleryElement.dataset.pageSize) || 8, 
+    pageSize = parseInt(galleryElement?.dataset?.pageSize) || 8, 
     specificPage = undefined, 
     prepend = false
 ) {
+    if(!galleryElement || !galleryItemTemplate) return;
+
     let pageMarker;
 
     if(typeof specificPage === "undefined") {
@@ -222,6 +225,7 @@ function loadMoreOnScroll() {
 }
 
 function refreshPhotoThumbnails() {
+    if (!galleryElement) return;
     galleryElement.replaceChildren();
     galleryElement.dataset.done = "false";
     galleryElement.dataset.nextPage = "";
@@ -230,8 +234,10 @@ function refreshPhotoThumbnails() {
 }
 
 function setRefreshMessages(message, action) {
-    document.querySelector('#refreshLink .message').innerHTML = message;
-    document.querySelector('#refreshLink .action').innerHTML = action;
+    const messageEl = document.querySelector('#refreshLink .message');
+    const actionEl = document.querySelector('#refreshLink .action');
+    if (messageEl) messageEl.innerHTML = message;
+    if (actionEl) actionEl.innerHTML = action;
 }
 
 function showRefreshLink() {
