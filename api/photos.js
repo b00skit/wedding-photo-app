@@ -308,12 +308,14 @@ function getExtensionFromContentType(contentType) {
     switch(suffix) {
         
         case 'heic':
-            return 'HEIC';
+        case 'heif':
+            return 'heic';
         
         case 'jpeg':
             return 'jpg';
             
         case 'quicktime':
+        case 'x-quicktime':
             return 'mov';
 
         default:
