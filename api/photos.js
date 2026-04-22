@@ -128,6 +128,7 @@ async function createPhotos(req, res) {
                 Key: bucketFilename, 
                 Body: req, 
                 ContentType: contentType,
+                ACL: 'public-read',
                 Metadata: {
                     uploadername: uploaderName
                 }
