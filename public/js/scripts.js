@@ -8,6 +8,13 @@ const uploadFeedbackElement = document.getElementById('uploadFeedback');
 const uploadMessageElement  = document.getElementById('uploadFeedbackMsg');
 const toastElement = document.getElementById('toast');
 const cancelUploadElement = document.getElementById('cancelUpload');
+const uploadFormElement = document.getElementById('uploadForm');
+
+if (uploadFormElement) {
+    uploadFormElement.addEventListener('submit', (event) => {
+        event.preventDefault();
+    });
+}
 
 function renderPhotoThumbnails(
     pageSize = parseInt(galleryElement.dataset.pageSize) || 8, 
