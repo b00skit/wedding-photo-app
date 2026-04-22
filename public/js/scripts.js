@@ -122,8 +122,12 @@ function renderPhotoThumbnails(
                 let linkElement = galleryItem.querySelector('a');
 
                 let thumb = new Image();
-                thumb.src = getThumbnailUrl(file);
+                const thumbUrl = getThumbnailUrl(file);
+                
                 thumb.onerror = replaceThumbnailWithPlaceholder;
+                thumb.src = thumbUrl;
+                
+                console.log("Attempting to load thumbnail:", thumbUrl);
 
                 let videoTemplate, media;
 
@@ -267,11 +271,13 @@ function getThumbnailUrl(file) {
 }
 
 function replaceThumbnailWithPlaceholder(event) {
+    console.warn("Thumbnail failed to load, replacing with placeholder:", event.target.src);
     event.target.src = '/images/placeholder.png';
 
     // We also need to replace the video poster if the thumbnail is broken
-    if(event.target.parentElement.dataset.type === 'customVideo') {
-        event.target.parentElement.querySelector('video').poster = '/images/placeholder.png';
+    if(event.target.parentElement?.dataset?.type === 'customVideo') {
+        const video = event.target.parentElement.querySelector('video');
+        if (video) video.poster = '/images/placeholder.png';
     }
 }
 
