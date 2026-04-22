@@ -39,6 +39,13 @@
 
             <hr style="margin: 3em 0; border: 0; border-top: 1px solid #eee;">
 
+            <div style="margin: 2em 0; text-align: center;">
+                <label for="uploaderFilter" style="font-weight: 600;">Filtriraj po imenu:</label>
+                <select id="uploaderFilter" style="padding: 0.5em; border-radius: 0.5em; font-family: Mulish; margin-left: 0.5em;">
+                    <option value="">Vse fotografije</option>
+                </select>
+            </div>
+
             <h3>Nedavno naloženo</h3>
             <ul id="gallery" data-next-page="" data-done="false" data-num-videos="0"></ul>
             <div id="spinner" class="hidden"><div></div></div>
@@ -56,7 +63,10 @@
         </div>
 
         <template id="galleryItem">
-            <li><a data-fslightbox="gallery"></a></li>
+            <li>
+                <a data-fslightbox="gallery"></a>
+                <span class="uploaderBadge"></span>
+            </li>
         </template>
 
         <script src="js/fslightbox.js"></script>

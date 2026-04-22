@@ -118,6 +118,13 @@ function renderPhotoThumbnails(
                     galleryItemLi.dataset.tagsChanged = false; // Track if tags have changed at all
                 }
 
+                // Set uploader name if exists
+                const uploaderBadge = galleryItem.querySelector('.uploaderBadge');
+                if (uploaderBadge) {
+                    uploaderBadge.innerText = uploaderName || '';
+                    if (!uploaderName) uploaderBadge.classList.add('hidden');
+                }
+
                 // Link element
                 let linkElement = galleryItem.querySelector('a');
 
@@ -545,4 +552,11 @@ if(refreshLinkElement) {
         refreshLinkElement.classList.add('hidden');
         refreshPhotoThumbnails();
     }
+}
+
+const uploaderFilterElement = document.getElementById('uploaderFilter');
+if (uploaderFilterElement) {
+    uploaderFilterElement.addEventListener('change', () => {
+        refreshPhotoThumbnails();
+    });
 }
