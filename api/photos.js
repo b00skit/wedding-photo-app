@@ -1,96 +1,76 @@
 require('dotenv').config();
 
-const { BlobServiceClient, BlockBlobClient } = require("@azure/storage-blob");
-const { DefaultAzureCredential } = require("@azure/identity");
-const { 
-    getTranscodedBlobName, 
-    moveTranscodedAsset,
-    transcodeJobCompleted, 
-    transcodeVideo 
-} = require('../modules/transcode.js');
+const { S3Client, ListObjectsV2Command, HeadObjectCommand, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand } = require("@aws-sdk/client-s3");
+const { Upload } = require("@aws-sdk/lib-storage");
 
-const accountName   = process.env.AZ_STORAGE_ACCOUNT_NAME;
-const containerName = process.env.AZ_STORAGE_CONTAINER_NAME;
-const accountUrl    = `https://${accountName}.blob.core.windows.net`;
-const containerUrl  = `${accountUrl}/${containerName}`;
-const imageCdnUrl   = process.env.IMAGE_CDN_BASE_URL;
+const s3Client = new S3Client({
+    endpoint: process.env.S3_ENDPOINT,
+    region: process.env.S3_REGION,
+    credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY,
+        secretAccessKey: process.env.S3_SECRET_KEY,
+    },
+    forcePathStyle: true, // often required for non-AWS S3
+});
+
+const bucketName = process.env.S3_BUCKET_NAME;
+const bucketUrl  = `${process.env.S3_ENDPOINT}/${bucketName}`;
+const imageCdnUrl = process.env.IMAGE_CDN_BASE_URL;
 
 // GET
 async function getPhotos(req, res) {
 
-    // Set up clients for the blob, the container
-    const blob = new BlobServiceClient(
-        accountUrl,
-        new DefaultAzureCredential()
-    );
-
-    const container = blob.getContainerClient(containerName);
-
     // Pagination options
     let pageSizeFromQuery = parseInt(req.query.pageSize);
-    let pageSize = ((pageSizeFromQuery > 0) ? pageSizeFromQuery : 1);
+    let pageSize = ((pageSizeFromQuery > 0) ? pageSizeFromQuery : 100);
     let pageMarker = req.query.pageMarker || undefined;
 
-    let blobOpts = { 
-        prefix: 'original',
-        includeMetadata: true
-    }
-
-    let pageOpts = { 
-        maxPageSize: pageSize,
-        continuationToken: pageMarker  // undefined for first page
-    }
+    const command = new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: 'original/',
+        MaxKeys: pageSize,
+        ContinuationToken: pageMarker
+    });
 
     // Get and parse the response data
     try {
-        let page = await container.listBlobsFlat(blobOpts).byPage(pageOpts).next();
+        const data = await s3Client.send(command);
 
-        let items = page.value.segment.blobItems;
-        let marker = page.value.continuationToken;
-        let done = (marker === '');
+        const items = data.Contents || [];
+        const marker = data.NextContinuationToken;
+        const done = !data.IsTruncated;
 
-        let files = [];
-        let promises = [];
-
-        items.forEach((item, index) => {
-
-            let promise = new Promise(async (resolve) => {
-                const contentType = item.properties.contentType;
-
-                // If the content is an image and image CDN url is specified, return
-                // the CDN-ized url in the response. Otherwise just return the blob url
-                const baseUrl = (contentType.split('/')[0] === 'image' && imageCdnUrl) ? 
-                    imageCdnUrl : containerUrl;
-
-                // If the content is a video, we'll check if the file has metadata 
-                // with the key `transcodedUrl`. If it does, this indicates a transcoded
-                // version of the video is available, and its url can be returned
-                let transcodedUrl;
-                if(contentType.split('/')[0] === 'video') {
-                    transcodedUrl = await getTranscodedUrl(item);
-                }
-
-                // Meta tags and people tags for this photo
-                const { metaTags, peopleTags } = item.metadata;
-
-                files[index] = {
-                    url: `${baseUrl}/${item.name}`,
-                    transcodedUrl,
-                    thumbnail: getThumbnailUrl(item),
-                    contentType,
-                    metaTags,
-                    peopleTags
-                };
-
-                resolve(true);
+        const files = await Promise.all(items.map(async (item) => {
+            // S3 ListObjectsV2 does not return metadata. 
+            // We need to call HeadObject for each item.
+            const headCommand = new HeadObjectCommand({
+                Bucket: bucketName,
+                Key: item.Key
             });
-            
-            promises.push(promise);
+            const head = await s3Client.send(headCommand);
+            const metadata = head.Metadata || {};
 
-        });
+            const contentType = head.ContentType;
+
+            // If the content is an image and image CDN url is specified, return
+            // the CDN-ized url in the response. Otherwise just return the bucket url
+            const baseUrl = (contentType.split('/')[0] === 'image' && imageCdnUrl) ? 
+                imageCdnUrl : bucketUrl;
+
+            // Transcoding is disabled for S3 for now
+            const transcodedUrl = metadata.transcodedurl;
+
+            return {
+                url: `${baseUrl}/${item.Key}`,
+                transcodedUrl,
+                thumbnail: getThumbnailUrl({ name: item.Key, properties: { contentType } }),
+                contentType,
+                metaTags: metadata.metatags,
+                peopleTags: metadata.peopletags,
+                name: item.Key // keep name for PATCH/DELETE
+            };
+        }));
         
-        await Promise.all(promises);
-
         res.status(200).send({
             files,
             nextPage: marker,
@@ -98,6 +78,7 @@ async function getPhotos(req, res) {
         });
         
     } catch(error) {
+        console.error(error);
         res.status(500).send({
             message: 'Internal Server Error',
             details: 'Could not retrieve photos.'
@@ -106,58 +87,39 @@ async function getPhotos(req, res) {
 }
 
 // POST
-function createPhotos(req, res) {
+async function createPhotos(req, res) {
 
     try {
 
         const contentType = req.headers["content-type"];
         const extension = getExtensionFromContentType(contentType);
         const nakedFilename = req.query.targetFilename.split(".")[0];
-        const bucketFilename = `${nakedFilename}.${extension}`; 
-        const bucketUrl = `${containerUrl}/${bucketFilename}`;
+        const bucketFilename = `original/${nakedFilename}.${extension}`; 
 
-        // Set up client for the blob we're about to create
-        const blockBlob = new BlockBlobClient(
-            bucketUrl, 
-            new DefaultAzureCredential()
-        );
+        const parallelUploads3 = new Upload({
+            client: s3Client,
+            params: { 
+                Bucket: bucketName, 
+                Key: bucketFilename, 
+                Body: req, 
+                ContentType: contentType 
+            },
+            queueSize: 4,
+            partSize: 1024 * 1024 * 5, // 5MB
+            leavePartsOnError: false,
+        });
+
+        await parallelUploads3.done();
+
+        // Transcoding logic would go here if we had a replacement service
         
-        // Stream the original to blob storage immediately, 
-        // passing thru Content-Type
-        blockBlob.uploadStream(
-            req, 
-            8 * 1024 * 1024, //bufferSize: 8MB (Default)
-            2,               //maxConcurrency
-            { blobHTTPHeaders: { blobContentType: contentType } }
-        ).then(() => {
-            // Create a transcode job for the video and tag the original
-            // file with the asset name so progress can be checked later
-            if(contentType.split('/')[0] === 'video') {
-                const transcodeTransformName = 'default';
-
-                transcodeVideo(bucketUrl, transcodeTransformName).then((job) => {
-                    if(!job) throw new Error('Failed to create transcode job');
-                    blockBlob.setMetadata({ 
-                        transcodeJobName: job.name,
-                        transcodeTransformName
-                    });
-                }).catch((error) => {
-                    console.log(error);
-                });
-            }
-
-            res.status(201).send({ 
-                message: 'OK',
-                details: 'Files uploaded successfully!' 
-            });
-        }).catch((error) => {
-            res.status(400).send({ 
-                message: 'Bad Request', 
-                details: 'Could not upload files.' 
-            });
+        res.status(201).send({ 
+            message: 'OK',
+            details: 'Files uploaded successfully!' 
         });
         
     } catch(error) {
+        console.error(error);
         res.status(500).send({ 
             message: 'Internal Server Error', 
             details: 'Could not upload photos.' 
@@ -167,7 +129,7 @@ function createPhotos(req, res) {
 }
 
 // PATCH
-function patchPhotos(req, res) {
+async function patchPhotos(req, res) {
     if(!req.body.files) {
         return res.status(400).send({ 
             message: 'Bad Request', 
@@ -187,56 +149,61 @@ function patchPhotos(req, res) {
             outcomes    
         });
     } else {
-        let patchOperations = [];
-
-        // Loop through each file and move from 'failed' to 
-        // 'completed' if the PATCH succeeds.
-        outcomes.failed.forEach((file, i) => {
-
-            const blockBlob = new BlockBlobClient(
-                `${containerUrl}/${file.name}`, 
-                new DefaultAzureCredential()
-            );
-            
-            // Currently we're only handling PATCHing metadata, not the blob itself
+        const patchOperations = req.body.files.map(async (file, i) => {
             if(!file.metadata) return;
-            let patchOp = blockBlob.setMetadata(file.metadata).then((result) => {
-                if(!result.errorCode) {
-                    outcomes.completed.push(file);
-                    delete outcomes.failed[i];
-                }
-            }).catch((error) => {
-                console.log(error);
-                // Do nothing - the patch failed
-            });
 
-            patchOperations.push(patchOp);
+            try {
+                // S3 doesn't have a direct "UpdateMetadata" - we have to CopyObject onto itself
+                // with new metadata.
+                const headCommand = new HeadObjectCommand({
+                    Bucket: bucketName,
+                    Key: file.name
+                });
+                const head = await s3Client.send(headCommand);
+
+                const copyCommand = new CopyObjectCommand({
+                    Bucket: bucketName,
+                    Key: file.name,
+                    CopySource: encodeURIComponent(`${bucketName}/${file.name}`),
+                    Metadata: {
+                        ...head.Metadata,
+                        ...file.metadata
+                    },
+                    MetadataDirective: 'REPLACE',
+                    ContentType: head.ContentType
+                });
+
+                await s3Client.send(copyCommand);
+
+                outcomes.completed.push(file);
+                // Remove from failed (using original index i)
+                outcomes.failed[i] = null;
+            } catch (error) {
+                console.error(`Failed to patch metadata for ${file.name}:`, error);
+            }
         });
 
-        Promise.all(patchOperations).then(() => {
-            outcomes.failed = outcomes.failed.flat();
+        await Promise.all(patchOperations);
+        outcomes.failed = outcomes.failed.filter(f => f !== null);
 
-            if(outcomes.completed.length < req.body.files.length) {
-                throw new Error('Not all files were updated');
-            }
-
-            res.status(200).send({ 
-                message: 'OK',
-                details: 'All photos updated',
-                outcomes
-            });
-        }).catch((error) => {
+        if(outcomes.completed.length < req.body.files.length) {
             res.status(500).send({ 
                 message: 'Internal Server Error',
                 details: 'Not all files were updated',
                 outcomes
             });
-        });   
+        } else {
+            res.status(200).send({ 
+                message: 'OK',
+                details: 'All photos updated',
+                outcomes
+            });
+        }
     }
 }
 
 // DELETE
-function deletePhotos(req, res) {
+async function deletePhotos(req, res) {
     if(!req.body.files) {
         return res.status(400).send({ 
             message: 'Bad Request', 
@@ -256,59 +223,36 @@ function deletePhotos(req, res) {
             outcomes    
         });
     } else {
-        let container;
-        let deleteOperations = [];
+        const deleteOperations = req.body.files.map(async (file, i) => {
+            try {
+                const command = new DeleteObjectCommand({
+                    Bucket: bucketName,
+                    Key: file.name
+                });
+                await s3Client.send(command);
+                outcomes.completed.push(file);
+                outcomes.failed[i] = null;
+            } catch (error) {
+                console.error(`Failed to delete ${file.name}:`, error);
+            }
+        });
 
-        try {
-            // Set up client for the blob service and container
-            const blob = new BlobServiceClient(
-                accountUrl,
-                new DefaultAzureCredential()
-            );
+        await Promise.all(deleteOperations);
+        outcomes.failed = outcomes.failed.filter(f => f !== null);
 
-            container = blob.getContainerClient(containerName);
-        } catch(error) {
+        if(outcomes.completed.length < req.body.files.length) {
             res.status(500).send({ 
                 message: 'Internal Server Error',
                 details: 'Not all files were deleted',
                 outcomes
             });
-        }
-
-        // Loop through each file and move from 'failed' to 
-        // 'completed' if the DELETE succeeds.
-        outcomes.failed.forEach((file, i) => {
-            let deleteOp = container.deleteBlob(file.name).then((result) => {
-                if(!result.errorCode) {
-                    outcomes.completed.push(file);
-                    delete outcomes.failed[i];
-                }
-            }).catch((error) => {
-                // Do nothing - the delete failed
-            });
-
-            deleteOperations.push(deleteOp);
-        });
-
-        Promise.all(deleteOperations).then(() => {
-            outcomes.failed = outcomes.failed.flat();
-
-            if(outcomes.completed.length < req.body.files.length) {
-                throw new Error('Not all files were deleted');
-            }
-
+        } else {
             res.status(200).send({ 
                 message: 'OK',
                 details: 'All photos deleted',
                 outcomes
             });
-        }).catch((error) => {
-            res.status(500).send({ 
-                message: 'Internal Server Error',
-                details: 'Not all files were deleted',
-                outcomes
-            });
-        });   
+        }
     }
 }
 
@@ -349,7 +293,7 @@ function getExtensionFromContentType(contentType) {
  * @returns {string}
  */
 function getThumbnailUrl(item) {
-    const baseUrl = (imageCdnUrl || containerUrl);
+    const baseUrl = (imageCdnUrl || bucketUrl);
     const videoThumbs = { base: 'video_thumbnails', extension: 'jpg' };
     let url;
 
@@ -374,55 +318,6 @@ function getThumbnailUrl(item) {
     }
 
     return url;
-}
-
-/**
- * When a video file has just been uploaded a transcode job
- * is generated to convert it to a limited bitrate format. 
- * This function runs when the object is constructed for the
- * GET API and either returns the transcoded url if was 
- * previously confirmed (i.e. url exists within the original
- * file's metadata), or if the metadata isn't present, the 
- * function will check the transcode job to see if it's 
- * finished, and if it is return the transcoded url. Other
- * scenarios return undefined and result in the front end
- * displaying a "this video is still processing" message.
- * @param   {object} item 
- * @returns {string|undefined}
- */
-async function getTranscodedUrl(item) {
-    return new Promise(async (resolve) => {
-        if(!item.metadata) resolve();
-
-        const { transcodeJobName, transcodeTransformName, transcodedUrl } = item.metadata;
-
-        // If the `transcodedUrl` metadata key exists, return it directly
-        if(transcodedUrl) resolve(transcodedUrl);
-
-        // Otherwise, check if the file is tagged with Transcode Job
-        // metadata. If so, this can be used to check the progress of the 
-        // transcode job and update the `transcodedUrl` metadata if the 
-        // job has now completed. 
-        if(transcodeTransformName && transcodeJobName) {
-            const jobComplete = await transcodeJobCompleted(transcodeTransformName, transcodeJobName); 
-
-            if(jobComplete) {
-                moveTranscodedAsset(
-                    transcodeJobName,  // Earlier we made assetName == jobName
-                    item.name
-                );
-
-                // Optimistically return the transcoded item url even 
-                // though move may not be complete
-                resolve(`${containerUrl}/${getTranscodedBlobName(item.name)}`);
-            }
-        }
-        
-        // If there is no transcoded url, and the job is not complete
-        // we return nothing and the transcoded url will not be included
-        // with the API response
-        resolve();
-    });
 }
   
 module.exports = { 
