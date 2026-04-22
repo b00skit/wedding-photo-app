@@ -456,7 +456,18 @@ function getLightboxUrl(file) {
 function refreshLightbox() {
     if(window.refreshFsLightbox) {
         refreshFsLightbox();
+        // Configuration for better mobile experience
         fsLightbox.props.loadOnlyCurrentSource = true;
+        fsLightbox.props.onOpen = () => {
+            // Force enter fullscreen on mobile if possible
+            const lightboxContainer = document.querySelector('.fslightbox-container');
+            if (lightboxContainer && lightboxContainer.requestFullscreen) {
+                // Only try if it's a small screen
+                if (window.innerWidth < 600) {
+                    lightboxContainer.requestFullscreen().catch(() => {});
+                }
+            }
+        };
         fsLightbox.props.onSlideChange = () => {
             console.log(document.querySelectorAll('video'));
         }
