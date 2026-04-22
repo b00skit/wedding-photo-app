@@ -6,7 +6,7 @@ services:
     ports:
       - "3009:3000"
     env_file:
-      - .env
+      - stack.env
     environment:
       - PORT=3000
     volumes:
