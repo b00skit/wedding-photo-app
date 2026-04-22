@@ -247,12 +247,19 @@ function showRefreshLink() {
 }
 
 function getThumbnailUrl(file) {
-    const dpr = (window.devicePixelRatio || 1);
-    const h = 195 * dpr;
-    const max_w = 260 * dpr;
-    const queryString = `?q=44&fit=crop&crop=top,faces&h=${h}&max-w=${max_w}`;
-
     if(file.thumbnail && file.thumbnail.length > 0) {
+        // If it's a relative path to a local placeholder, don't append query strings
+        if (file.thumbnail.startsWith('images/')) return file.thumbnail;
+        
+        // Only append optimization parameters if using a CDN
+        // We check if the thumbnail URL contains the S3 endpoint to decide
+        const isS3 = file.thumbnail.includes('your-objectstorage.com');
+        if (isS3) return file.thumbnail;
+
+        const dpr = (window.devicePixelRatio || 1);
+        const h = 195 * dpr;
+        const max_w = 260 * dpr;
+        const queryString = `?q=44&fit=crop&crop=top,faces&h=${h}&max-w=${max_w}`;
         return file.thumbnail + queryString;
     } else {
         return 'images/placeholder.png';
@@ -435,7 +442,11 @@ function getLightboxUrl(file) {
     if(transcodedUrl) return transcodedUrl;
 
     if(contentType.split('/')[0] === 'image') {
-        url += '?q=65&h=1080';
+        // Only append optimization parameters if using a CDN
+        const isS3 = url.includes('your-objectstorage.com');
+        if (!isS3) {
+            url += '?q=65&h=1080';
+        }
     }
 
     return url
