@@ -1,0 +1,13 @@
+services:
+  wedding-photo-app:
+    build: .
+    container_name: wedding-photo-app
+    restart: always
+    ports:
+      - "3009:3000"
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+    volumes:
+      - /home/bilkapro/web/poroka.bilkapro.si/private/p-data:/app/data
