@@ -1,5 +1,7 @@
 require('dotenv').config();
-const { S3Client, ListObjectsV2Command, HeadObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, ListObjectsV2Command, HeadObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const archiver = require('archiver');
+const axios = require('axios');
 
 const s3Client = new S3Client({
     endpoint: process.env.S3_ENDPOINT,
@@ -13,7 +15,67 @@ const s3Client = new S3Client({
 
 const bucketName = process.env.S3_BUCKET_NAME;
 
-// GET
+// POST - Download all photos as a ZIP, organized by uploader
+async function downloadAll(req, res) {
+    if (req.body.password !== process.env.WPA_MANAGE_PASSWORD) {
+        return res.status(401).send({
+            message: 'Unauthorized',
+            details: 'Password does not match.'
+        });
+    }
+
+    try {
+        const command = new ListObjectsV2Command({
+            Bucket: bucketName,
+            Prefix: 'original/',
+        });
+
+        const data = await s3Client.send(command);
+        const items = data.Contents || [];
+
+        const archive = archiver('zip', {
+            zlib: { level: 9 }
+        });
+
+        res.attachment('wedding-photos.zip');
+        archive.pipe(res);
+
+        for (const item of items) {
+            // Get metadata to find uploader name
+            const headCommand = new HeadObjectCommand({
+                Bucket: bucketName,
+                Key: item.Key
+            });
+            const head = await s3Client.send(headCommand);
+            const uploaderName = (head.Metadata && head.Metadata.uploadername) || 'Anonymous';
+            
+            // Get actual object stream
+            const getCommand = new GetObjectCommand({
+                Bucket: bucketName,
+                Key: item.Key
+            });
+            const { Body } = await s3Client.send(getCommand);
+
+            const fileName = item.Key.split('/').pop();
+            const folderName = uploaderName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            
+            archive.append(Body, { name: `${folderName}/${fileName}` });
+        }
+
+        archive.finalize();
+
+    } catch(error) {
+        console.error(error);
+        if (!res.headersSent) {
+            res.status(500).send({
+                message: 'Internal Server Error',
+                details: 'Could not create zip archive.'
+            });
+        }
+    }
+}
+
+// GET - Original downloadPhotos for compatibility
 async function downloadPhotos(req, res) {
     const filterUploader = req.query.uploader;
 
@@ -43,7 +105,6 @@ async function downloadPhotos(req, res) {
             files = files.filter(f => f.uploaderName === filterUploader);
         }
 
-        // Return a list of signed URLs or public URLs for the client to download
         const baseUrl = `${process.env.S3_ENDPOINT}/${bucketName}`;
         const urls = files.map(f => `${baseUrl}/${f.key}`);
 
@@ -62,5 +123,6 @@ async function downloadPhotos(req, res) {
 }
   
 module.exports = { 
-    downloadPhotos
+    downloadPhotos,
+    downloadAll
 }

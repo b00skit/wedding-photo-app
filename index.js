@@ -134,6 +134,10 @@ app.post('/api/photos/download', (req, res) => {
     downloadPhotosAPI.downloadPhotos(req, res);
 });
 
+app.post('/api/photos/download-all', (req, res) => {
+    downloadPhotosAPI.downloadAll(req, res);
+});
+
 
 /* All other routes should 404 */
 app.all('*', (req, res) => {

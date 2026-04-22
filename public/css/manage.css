@@ -1,222 +1,35 @@
-header {
+.manage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2em;
+    margin-top: 2em;
+}
+
+.manage-card {
+    background: white;
+    padding: 2em;
+    border-radius: 1em;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
+    border: 1px solid #eee;
 }
 
-h1 { 
-    margin-bottom: 0.4em;
+.manage-card h3 {
+    margin-top: 0;
 }
 
-nav ul li {
-    list-style: none;
-    margin-bottom: 0.7em;
-    font-size: 1.4em;
+.manage-card p {
+    color: #666;
+    margin: 1em 0 2em;
+    flex-grow: 1;
 }
 
-input[name=username] {
-    display: none;
-}
-
-.manageCommitForm {
-    position: fixed;
-    bottom: 0;
-    left: 0;
+.manage-card .button {
     width: 100%;
-    height: 9em;
-    padding-top: 1.5em;
-    background: #fef7f3;
-    border-top: 2px solid #aaa;
-}
-
-.manageCommitForm fieldset {
-    margin: auto;
-    padding: 0 1em;
-    max-width: 884px;
-    border: 0;
-}
-
-body > section:has(.manageCommitForm) {
-    padding-bottom: 6em;
-}
-
-.managePassword { 
-    margin: 0 0.5em;
-    padding: 0.3em;
-    font-size: 1.4em;
-    max-width: 160px;
-}
-
-.manageButton {
-    border: 2px solid #b28b0d;
-    border-radius: 0.3em;
-    font-size: 1em;
-}
-
-.manageSaveButton {
-    border-color: #65dd95;
-    background-color: #17be70;
-    color: #fff;
-}
-
-.manageSaveButton:disabled {
-    border: 2px solid #b7ddcd;
-    background-color: #abdacd;
-    color: #909090;
-}
-
-.manageSaveButton:active {
-    background-color: #2fe08e;
-}
-
-#manageDeleteButton {
-    border-color: #ffb4b4;
-    background-color: #be1717;
-    color: #ebebeb;
-}
-
-#manageDeleteButton:disabled {
-    border: 2px solid #ddb7b7;
-    background-color: #daabab;
-    color: #909090;
-}
-
-#manageDeleteButton:active {
-    background-color: #cf4343;
-}
-
-#gallery.manageGallery { 
-    gap: 0;
-}
-
-#gallery.manageGallery > li {
-    height: 45vw;
-    width: 44%;
-    overflow: scroll;
-    padding: 2%;
-    margin: 1%;
     box-sizing: border-box;
-    border: 1px solid #ddd;
-}
-
-#gallery.manageGallery > li[data-tags-changed="true"] {
-    border: 3px dashed #2fe08e;
-}
-
-#gallery.manageGallery.tagGallery > li {
-    height: 75vw;
-}
-
-#gallery.manageGallery > li img {
-    height: 66%;
-    max-height: 66%;
-    max-width: 100%;
-}
-
-#gallery.manageGallery > li .bucketPath {
-    max-height: 29%;
-    padding: 0 0.3em;
-    font-size: 0.6em;
-    text-align: left;
-    word-wrap: break-word;
-    overflow: hidden;
-    margin: 5% 0;
-}
-
-#gallery.manageGallery > li.selected {
-    background-color: #0d5eb2;
-    color: #ffdbdb;
-}
-
-#gallery.manageDeleteGallery > li.selected {
-    background-color: #eb1d1d;
-}
-
-#gallery.manageGallery > li.selected img {
-    filter: grayscale(80%) opacity(50%);
-}
-
-.tagGroup {
-    text-align: left;
-    font-size: 0.7em;
-}
-
-.tagGroup ul {
-    display: inline;
-}
-
-.tagGroup li {
-    display: inline-block;
-    padding: 0.3em 0 0.3em 0.5em;
-    margin: 0 0.4em 0.4em 0;
-    list-style: none;
-    font-size: 0.9em;
-    border: 1px solid #e4afef;
-    background-color: #983a89;
-    color: #fff;
-    cursor: default;
-}
-
-.tagGroup.metaTagGroup li {
-    border-color: #5f9bcf;
-    background-color: #0d5eb2;
-}
-
-.deleteTag {
-    color: #fff;
-    cursor: pointer;
-}
-
-.deleteTag::after {
-    content: "×";
-    padding: 0.3em 0.5em;
-}
-
-.deleteTag:hover {
-    color: #eb1d1d;
-}
-
-@media screen and (min-width: 550px) {
-    #gallery.manageGallery > li {
-        height: 36vw;
-        width: 27%;
-        padding: 2%;
-        margin: 1%;
-    }
-
-    #gallery.manageGallery.tagGallery > li {
-        height: 58vw;
-    }
-
-    #gallery.manageGallery > li .bucketPath {
-        font-size: 0.8em;
-    }
-
-    .manageCommitForm {
-        height: 6em;
-        padding-top: 0;
-    }
-
-    .manageCommitForm fieldset {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-    }
-
-    .managePassword {
-        padding: 0.5em 0.3em;
-        max-width: 190px;
-    }
-}
-
-@media screen and (min-width: 900px) {
-    #gallery.manageGallery > li {
-        height: 300px;
-    }
-
-    #gallery.manageGallery.tagGallery > li {
-        height: 430px;
-    }
-
-    .managePassword {
-        max-width: 300px;
-    }
+    margin-top: auto;
+    font-size: 1.1em;
 }

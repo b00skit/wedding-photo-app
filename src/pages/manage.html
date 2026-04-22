@@ -3,31 +3,90 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>Urejanje fotografij ≫ Poroka Davida & Sare</title>
+        <title>Upravljanje ≫ Poroka Davida & Sare</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="css/styles.css">
-        <link rel="stylesheet" href="css/manage.css">
+        <link rel="stylesheet" href="/css/styles.css">
+        <link rel="stylesheet" href="/css/manage.css">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Mulish:wght@200;600&display=swap">
-        <link rel="shortcut icon" href="images/app-icon.png" type="image/x-icon" />
+        <link rel="shortcut icon" href="/images/app-icon.png" type="image/x-icon" />
     </head>
     <body>
         <header>
-            <img class="header-decor" src="images/header.jpg" />
+            <img class="header-decor" src="/images/header.jpg" />
             <h1 class="site-title">David & Sara</h1>
             <span class="date">28.05.2023</span>
-            <h2 style="text-align:center; font-family: Mulish; margin-top: 1em;">Urejanje fotografij</h2>
         </header>
         <section>
-            <nav>
-                <ul>
-                    <li><a href="/people">Zaznaj osebe na fotografijah</a></li>
-                    <li><a href="/tag">Označi fotografije in videoposnetke</a></li>
-                    <li><a href="/delete">Izbriši fotografije in videoposnetke</a></li>
-                </ul>
-            </nav>
+            <h2>Admin nadzorna plošča</h2>
+            
+            <div class="manage-grid">
+                <div class="manage-card">
+                    <h3>Prenos vseh fotografij</h3>
+                    <p>Prenesite vse naložene fotografije v ZIP arhivu, razvrščene v mape po imenih gostov.</p>
+                    <form id="downloadAllForm">
+                        <input type="password" id="adminPassword" placeholder="Admin geslo" required style="padding: 0.8em; margin-bottom: 1em; width: 80%; border: 1px solid #ccc; border-radius: 4px;">
+                        <button type="submit" class="button">Prenesi ZIP</button>
+                    </form>
+                </div>
+
+                <div class="manage-card">
+                    <h3>Urejanje fotografij</h3>
+                    <p>Označi fotografije, dodaj imena ljudi ali popravi podatke.</p>
+                    <a href="/tag" class="button">Označi fotografije</a>
+                </div>
+
+                <div class="manage-card">
+                    <h3>Brisanje fotografij</h3>
+                    <p>Odstrani neprimerne ali neželene fotografije iz galerije.</p>
+                    <a href="/delete" class="button" style="border-color: #d63031; color: #d63031;">Izbriši fotografije</a>
+                </div>
+            </div>
         </section>
+
+        <div id="toast">
+            <span class="message"></span>
+            <div class="timer"></div>
+        </div>
+
+        <script>
+            document.getElementById('downloadAllForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const password = document.getElementById('adminPassword').value;
+                const button = e.target.querySelector('button');
+                
+                button.disabled = true;
+                button.innerText = 'Pripravljam ZIP...';
+
+                try {
+                    const response = await fetch('/api/photos/download-all', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password })
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'wedding-photos.zip';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    } else {
+                        const err = await response.json();
+                        alert('Napaka: ' + (err.details || err.message));
+                    }
+                } catch (err) {
+                    alert('Prišlo je do napake pri prenosu.');
+                } finally {
+                    button.disabled = false;
+                    button.innerText = 'Prenesi ZIP';
+                }
+            };
+        </script>
     </body>
 </html>
