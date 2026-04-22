@@ -108,8 +108,13 @@ async function createPhotos(req, res) {
 
         const contentType = req.headers["content-type"];
         const extension = getExtensionFromContentType(contentType);
-        const nakedFilename = req.query.targetFilename.split(".")[0];
-        const bucketFilename = `original/${nakedFilename}.${extension}`; 
+        
+        // Remove existing extension if present to avoid double extensions
+        const targetPath = req.query.targetFilename;
+        const lastDotIndex = targetPath.lastIndexOf('.');
+        const pathWithoutExtension = lastDotIndex !== -1 ? targetPath.substring(0, lastDotIndex) : targetPath;
+        
+        const bucketFilename = `${pathWithoutExtension}.${extension}`; 
         const uploaderName = req.query.uploaderName || '';
 
         const parallelUploads3 = new Upload({
