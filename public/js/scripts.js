@@ -28,7 +28,10 @@ function renderPhotoThumbnails(
     spinnerElement.classList.remove('hidden');
     window.fetchIsRunning = true;
 
-    fetch(`/api/photos?pageSize=${pageSize}&pageMarker=${pageMarker}`)
+    const uploaderFilter = document.getElementById('uploaderFilter')?.value || '';
+    const uploaderParam = uploaderFilter ? `&uploader=${encodeURIComponent(uploaderFilter)}` : '';
+
+    fetch(`/api/photos?pageSize=${pageSize}&pageMarker=${pageMarker}${uploaderParam}`)
 
         .then(response => {
             if(Math.floor(response.status/100) === 2) {
@@ -52,11 +55,22 @@ function renderPhotoThumbnails(
                 galleryElement.dataset.done = (data.done ? "true" : "false");
             }
     
+            const filterDropdown = document.getElementById('uploaderFilter');
+            const currentFilter = filterDropdown?.value;
+
             // Populate the gallery
             data.files.forEach((file, i) => {
 
-                const { metaTags, peopleTags, url } = file;
+                const { metaTags, peopleTags, url, uploaderName } = file;
                 
+                // Add to filter dropdown if not exists
+                if (filterDropdown && uploaderName && !Array.from(filterDropdown.options).some(opt => opt.value === uploaderName)) {
+                    const option = document.createElement('option');
+                    option.value = uploaderName;
+                    option.text = uploaderName;
+                    filterDropdown.add(option);
+                }
+
                 const contentType = file.contentType.split('/')[0];
                 const lightboxContentType = (contentType === 'video' ? 
                     'customVideo' : contentType);
@@ -244,6 +258,7 @@ function replaceThumbnailWithPlaceholder(event) {
 function uploadFiles(event) {
     const files = event.target.files;
     const numFiles = files.length;
+    const uploaderName = document.getElementById('uploaderName')?.value || '';
 
     if(numFiles === 0) return;
 
@@ -267,7 +282,7 @@ function uploadFiles(event) {
         let { 
             upload,
             controller 
-        } = queueFileUpload(files[i], `original/${targetFilename}`);
+        } = queueFileUpload(files[i], `original/${targetFilename}`, uploaderName);
 
         fetches.push(upload);
 
@@ -285,7 +300,7 @@ function uploadFiles(event) {
         // Also upload a thumbnail image for videos
         if(files[i].type.split('/')[0] === 'video') {
             captureVideoThumbnail(files[i]).then((blob) => {
-                queueFileUpload(blob, `video_thumbnails/${targetFilename}`);
+                queueFileUpload(blob, `video_thumbnails/${targetFilename}`, uploaderName);
             }).catch(error => {
                 console.warn('Video thumbnail creation failed.', error);
                 return false;
@@ -320,12 +335,13 @@ function uploadFiles(event) {
     });
 }
 
-function queueFileUpload(file, targetFilename) {
+function queueFileUpload(file, targetFilename, uploaderName = '') {
     targetFilename = encodeURIComponent(targetFilename);
+    const encodedUploaderName = encodeURIComponent(uploaderName);
     
     let controller = new AbortController();
 
-    let upload = fetch(`/api/photos?targetFilename=${targetFilename}`, {
+    let upload = fetch(`/api/photos?targetFilename=${targetFilename}&uploaderName=${encodedUploaderName}`, {
         method: 'POST',
         body: file,
         headers: {

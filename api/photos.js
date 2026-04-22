@@ -24,11 +24,12 @@ async function getPhotos(req, res) {
     let pageSizeFromQuery = parseInt(req.query.pageSize);
     let pageSize = ((pageSizeFromQuery > 0) ? pageSizeFromQuery : 100);
     let pageMarker = req.query.pageMarker || undefined;
+    let filterUploader = req.query.uploader || undefined;
 
     const command = new ListObjectsV2Command({
         Bucket: bucketName,
         Prefix: 'original/',
-        MaxKeys: pageSize,
+        MaxKeys: filterUploader ? 1000 : pageSize, // If filtering, we need to fetch more to find matches
         ContinuationToken: pageMarker
     });
 
@@ -37,10 +38,10 @@ async function getPhotos(req, res) {
         const data = await s3Client.send(command);
 
         const items = data.Contents || [];
-        const marker = data.NextContinuationToken;
-        const done = !data.IsTruncated;
+        let marker = data.NextContinuationToken;
+        let done = !data.IsTruncated;
 
-        const files = await Promise.all(items.map(async (item) => {
+        let files = await Promise.all(items.map(async (item) => {
             // S3 ListObjectsV2 does not return metadata. 
             // We need to call HeadObject for each item.
             const headCommand = new HeadObjectCommand({
@@ -67,9 +68,16 @@ async function getPhotos(req, res) {
                 contentType,
                 metaTags: metadata.metatags,
                 peopleTags: metadata.peopletags,
+                uploaderName: metadata.uploadername,
                 name: item.Key // keep name for PATCH/DELETE
             };
         }));
+
+        if (filterUploader) {
+            files = files.filter(f => f.uploaderName === filterUploader);
+            // Pagination is tricky when filtering server-side without a DB
+            // For now we just return what we found in this batch
+        }
         
         res.status(200).send({
             files,
@@ -95,6 +103,7 @@ async function createPhotos(req, res) {
         const extension = getExtensionFromContentType(contentType);
         const nakedFilename = req.query.targetFilename.split(".")[0];
         const bucketFilename = `original/${nakedFilename}.${extension}`; 
+        const uploaderName = req.query.uploaderName || '';
 
         const parallelUploads3 = new Upload({
             client: s3Client,
@@ -102,7 +111,10 @@ async function createPhotos(req, res) {
                 Bucket: bucketName, 
                 Key: bucketFilename, 
                 Body: req, 
-                ContentType: contentType 
+                ContentType: contentType,
+                Metadata: {
+                    uploadername: uploaderName
+                }
             },
             queueSize: 4,
             partSize: 1024 * 1024 * 5, // 5MB

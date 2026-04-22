@@ -23,6 +23,10 @@
             <p>Prosimo, naložite svoje fotografije in videoposnetke, da jih delite z nami in ostalimi gosti.</p>
 
             <form id="uploadForm" method="post" action="/api/photos">
+                <div style="margin-bottom: 1.5em;">
+                    <label for="uploaderName" style="display: block; margin-bottom: 0.5em; font-weight: 600;">Vaše ime (neobvezno):</label>
+                    <input type="text" id="uploaderName" placeholder="Vpišite svoje ime" style="padding: 0.8em; border: 1px solid #ccc; border-radius: 0.5em; width: 80%; max-width: 300px; font-family: Mulish;">
+                </div>
                 <button class="button" id="uploadBtn">Naloži fotografije</button>
                 <input id="imageFiles" type="file" accept="image/*, image/heic, video/*" multiple />
                 <div id="uploadFeedback" class="hidden">
