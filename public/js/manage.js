@@ -9,10 +9,19 @@ const manageGallery = document.getElementById('gallery');
 if(manageGallery) {
     manageGallery.addEventListener('click', (event) => {
         if(event.target.id === 'gallery') return;
-        event.target.closest('li').classList.toggle('selected');
-        updateManageCommitButtonText();
-        event.stopPropagation();
-        event.preventDefault();
+        
+        // Don't toggle selection if clicking on a tag or its delete button
+        if (event.target.classList.contains('deleteTag') || event.target.closest('.tagGroup')) {
+            return; 
+        }
+
+        const li = event.target.closest('li');
+        if (li) {
+            li.classList.toggle('selected');
+            updateManageCommitButtonText();
+            event.stopPropagation();
+            event.preventDefault();
+        }
     });
 }
 

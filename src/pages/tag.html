@@ -21,6 +21,13 @@
             <h2 style="text-align:center; font-family: Mulish; margin-top: 1em;">Označi fotografije</h2>
         </header>
         <section>
+            <div style="margin: 2em 0; text-align: center;">
+                <label for="uploaderFilter" style="font-weight: 600;">Filtriraj po imenu:</label>
+                <select id="uploaderFilter" style="padding: 0.5em; border-radius: 0.5em; font-family: Mulish; margin-left: 0.5em;">
+                    <option value="">Vse fotografije</option>
+                </select>
+            </div>
+
             <ul 
                 id="gallery" 
                 class="manageGallery tagGallery" 
@@ -73,6 +80,7 @@
         <template id="galleryItem">
             <li>
                 <a></a>
+                <span class="uploaderBadge"></span>
                 <p class="bucketPath"></p>
                 <div class="tagGroup peopleTagGroup">
                     Osebe: 
