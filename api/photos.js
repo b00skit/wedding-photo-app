@@ -51,11 +51,11 @@ async function getPhotos(req, res) {
             const head = await s3Client.send(headCommand);
             const metadata = head.Metadata || {};
 
-            const contentType = head.ContentType;
+            const contentType = head.ContentType || '';
 
             // If the content is an image and image CDN url is specified, return
             // the CDN-ized url in the response. Otherwise just return the bucket url
-            const baseUrl = (contentType.split('/')[0] === 'image' && imageCdnUrl) ? 
+            const baseUrl = (contentType && contentType.split('/')[0] === 'image' && imageCdnUrl) ? 
                 imageCdnUrl : bucketUrl;
 
             // Transcoding is disabled for S3 for now
@@ -98,6 +98,13 @@ async function getPhotos(req, res) {
 async function createPhotos(req, res) {
 
     try {
+
+        if (!req.query.targetFilename) {
+            return res.status(400).send({
+                message: 'Bad Request',
+                details: 'targetFilename query parameter is required.'
+            });
+        }
 
         const contentType = req.headers["content-type"];
         const extension = getExtensionFromContentType(contentType);
@@ -279,6 +286,8 @@ async function deletePhotos(req, res) {
  */
 function getExtensionFromContentType(contentType) {
 
+    if (!contentType) return '';
+
     const suffix = contentType.split("/")[1];
     
     switch(suffix) {
@@ -308,6 +317,8 @@ function getThumbnailUrl(item) {
     const baseUrl = (imageCdnUrl || bucketUrl);
     const videoThumbs = { base: 'video_thumbnails', extension: 'jpg' };
     let url;
+
+    if (!item.properties || !item.properties.contentType) return '';
 
     switch(item.properties.contentType.split('/')[0]) {
         case 'image':
